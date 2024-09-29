@@ -1,0 +1,208 @@
+#Frontend 
+#HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Media Platform</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Social Media Platform</h1>
+  </header>
+
+  <div id="profile">
+    <h2>User Profile</h2>
+    <img src="profile-pic.jpg" alt="Profile Picture" id="profile-pic">
+    <h3>Username</h3>
+    <button id="follow-btn">Follow</button>
+  </div>
+
+  <div id="feed">
+    <h2>Posts</h2>
+
+    <div class="post">
+      <h4>Post by User1</h4>
+      <p>This is a sample post content.</p>
+      <button class="like-btn">Like</button>
+      <span class="like-count">0 Likes</span>
+      <div class="comments">
+        <h5>Comments</h5>
+        <ul>
+          <li>Great post!</li>
+        </ul>
+        <textarea class="comment-input" placeholder="Add a comment"></textarea>
+        <button class="comment-btn">Comment</button>
+      </div>
+    </div>
+
+    <div class="post">
+      <h4>Post by User2</h4>
+      <p>Another sample post.</p>
+      <button class="like-btn">Like</button>
+      <span class="like-count">0 Likes</span>
+      <div class="comments">
+        <h5>Comments</h5>
+        <ul>
+          <li>Amazing!</li>
+        </ul>
+        <textarea class="comment-input" placeholder="Add a comment"></textarea>
+        <button class="comment-btn">Comment</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+#Css styling 
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f4;
+}
+
+header {
+  background-color: #333;
+  color: #fff;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+#profile {
+  padding: 2rem;
+  text-align: center;
+}
+
+#feed {
+  padding: 1rem 2rem;
+}
+
+.post {
+  background-color: #fff;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.like-btn, .comment-btn, #follow-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.like-btn:hover, .comment-btn:hover, #follow-btn:hover {
+  background-color: #0056b3;
+}
+
+textarea.comment-input {
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+}
+#Java script client(fun -side functionality 
+document.addEventListener('DOMContentLoaded', () => {
+  const likeButtons = document.querySelectorAll('.like-btn');
+  const commentButtons = document.querySelectorAll('.comment-btn');
+  const followButton = document.getElementById('follow-btn');
+
+  // Handle Like Button Click
+  likeButtons.forEach((button) => {
+    button.addEventListener('click', function() {
+      const likeCountElement = this.nextElementSibling;
+      let likeCount = parseInt(likeCountElement.textContent);
+      likeCount++;
+      likeCountElement.textContent = `${likeCount} Likes`;
+    });
+  });
+
+  // Handle Comment Submission
+  commentButtons.forEach((button) => {
+    button.addEventListener('click', function() {
+      const commentInput = this.previousElementSibling;
+      const commentText = commentInput.value;
+      if (commentText.trim()) {
+        const commentList = this.parentElement.querySelector('ul');
+        const newComment = document.createElement('li');
+        newComment.textContent = commentText;
+        commentList.appendChild(newComment);
+        commentInput.value = '';
+      }
+    });
+  });
+
+  // Handle Follow Button Click
+  followButton.addEventListener('click', function() {
+    this.textContent = this.textContent === 'Follow' ? 'Unfollow' : 'Follow';
+  });
+});
+#Backend: express.js
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+
+const app = express();
+app.use(bodyParser.json());
+
+mongoose.connect('mongodb://localhost/social_media', { useNewUrlParser: true, useUnifiedTopology: true });
+
+// Define User, Post, Comment Models
+const UserSchema = new mongoose.Schema({
+  username: String,
+  followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+});
+
+const PostSchema = new mongoose.Schema({
+  content: String,
+  likes: { type: Number, default: 0 },
+  comments: [{ content: String, user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } }]
+});
+
+const User = mongoose.model('User', UserSchema);
+const Post = mongoose.model('Post', PostSchema);
+
+// Get all posts
+app.get('/posts', async (req, res) => {
+  const posts = await Post.find().populate('comments.user').exec();
+  res.json(posts);
+});
+
+// Like a post
+app.post('/posts/:id/like', async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  post.likes += 1;
+  await post.save();
+  res.json({ success: true, likes: post.likes });
+});
+
+// Comment on a post
+app.post('/posts/:id/comment', async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  const comment = { content: req.body.content, user: req.body.user };
+  post.comments.push(comment);
+  await post.save();
+  res.json({ success: true });
+});
+
+// Follow a user
+app.post('/users/:id/follow', async (req, res) => {
+  const user = await User.findById(req.params.id);
+  const follower = await User.findById(req.body.followerId);
+  user.followers.push(follower);
+  await user.save();
+  res.json({ success: true });
+});
+
+app.listen(3000, () => {
+  console.log('Server running on port 3000');
+});
+#Running the project 
+node server.js
